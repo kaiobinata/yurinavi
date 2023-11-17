@@ -91,6 +91,13 @@ if __name__ == '__main__':
         csv_writer.writerow(entry_dict)
         print(f'{entry_dict}\n')
 
+    # After learning from experienced Python developers, I now prioritize performance optimization.
+    # I leverage techniques like vectorization, caching, and algorithmic improvements to enhance
+    # the speed and efficiency of my code.
+    # For example, when working with Pandas DataFrames, I make use of vectorized operations instead
+    # of iterating over rows or columns, which can be significantly slower.
+    # # Example of vectorized operation using Pandas (df in this case)
+    # data['new_column'] = data['existing_column'] * 2
     # # Applying a function to each row
     # df['new_column'] = df['existing_column'].apply(lambda x: x * 2)
 

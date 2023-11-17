@@ -19,6 +19,9 @@ def scrape(dic, url):
     # switch between packages (creatively bypass automated access to Amazon)
     request_type = 'requests'   # 'urllib.request' or 'requests'
     amzn_soup = simple_soup(request_type, url)
+    if amzn_soup is None:
+        dic.update(error='URL invalid')
+        return dic
 
     print(f'***** Current Entry ***** \nURL: {url}')
 
@@ -30,7 +33,7 @@ def scrape(dic, url):
             selected_string = selected.get_text()
             # if 'selected' is in the 'Kindle版' format
             if re.search('Kindle', selected_string):
-                print(f'isKindle: {url}')
+                print(f'isKindle: {True}')
                 dic.update(iskindle='Kindle版')
             # if 'selected' is not a 'Kindle版' format
             else:
@@ -62,8 +65,17 @@ def scrape(dic, url):
                     dic.update(iskindle=format_curr)  # if there is no match, format is None
     else:
         page_not_found = amzn_soup.find('a', href="/ref=cs_404_link")
+        age_verification = amzn_soup.find('p', id="black-curtain-verification")
         if page_not_found:
             dic.update(error="404 Page not Found")
+            return dic
+        elif age_verification:
+            dic.update(error="Age verification")
+            # # assumes if age_verification element exists, so does verification button
+            # verification_button = age_verification.find(id='black-curtain-yes-button')
+            # verification_href = verification_button.find('a').get('href')
+            # verified_url = url + verification_href
+            # dic = scrape(dic, verified_url)
             return dic
         else:
             dic.update(error="Unknown URL Error")
@@ -181,7 +193,7 @@ def amazon_selenium_scrape(diction, soup):
         title_check = series_check.find('div', class_="rpi-attribute-value")
         volume_check = series_check.find('div', class_="rpi-attribute-label")
         if title_check:
-            print(f"string method: {title_check.find('span').string}")
+            # tit_string_method = str(title_check.find('span').string).lstrip()
             tit = str(title_check.get_text()).lstrip()
             diction.update(title=tit)
             print(f"tit: {tit}")
@@ -250,12 +262,8 @@ def amazon_selenium_scrape(diction, soup):
             # switch between a list or a concatenated single string (&&)
             switch_list_type = 'list'
             if switch_list_type == 'list':
-                # changed code: List Comprehensions
-                # aut = [author.find('a').string for author in author_list]
-                # previous code:
-                aut = []
-                for author in author_list:
-                    aut.append(author.find('a').string)
+                # List Comprehensions implemented
+                aut = [author.find('a').string for author in author_list]
                 print(f"aut: {aut}")
                 diction.update(authors=aut)
             elif switch_list_type == 'concat':
@@ -279,6 +287,7 @@ def amazon_selenium_scrape(diction, soup):
             ratings_average = re.sub('(5つ星のうち)|( out of 5 stars)', '', ratings_average)
             ratings_submissions = str(ratings_submissions.string)
             ratings_submissions = re.sub('(個の評価)|( ratings)', '', ratings_submissions)
+            ratings_submissions = re.sub(',', '', ratings_submissions)  # removes commas from values
             rat = [ratings_average, ratings_submissions]
             print(f"rat: {rat}")
             diction.update(rating=rat)
@@ -348,9 +357,8 @@ def reformat_date(date_string):
 
 # Test Bench
 if __name__ == '__main__':
-    # Set up logging
-    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
-
+    # # Set up logging
+    # logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
     # # Debugging example
     # logging.debug(f"Dividing {a} by {b}")
     # result = a / b
@@ -365,6 +373,8 @@ if __name__ == '__main__':
     # https://www.amazon.co.jp/シロップ-PURE-おねロリ百合アンソロジー-アクションコミックス-月刊アクション)/dp/B08B5SGBNY/
     # for english:
     # https://www.amazon.co.jp/シロップ-PURE-おねロリ百合アンソロジー-アクションコミックス-月刊アクション)/dp/4575854816/
+    # for 18+ content:
+    # https://amzn.to/45EFaeS
 
     # initialize csv file
     csv_filename = 'amazon.csv'
