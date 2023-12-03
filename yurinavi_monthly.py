@@ -60,7 +60,7 @@ if __name__ == '__main__':
     csv_filename = 'yurinavimonthly.csv'
     csv_file = open(csv_filename, 'w', newline='', encoding='utf_8_sig')
     fieldnames = ['title', 'authors', 'released',
-                  'publisher', 'label', 'serialization',
+                  'publisher', 'label',
                   'volume', 'vol error', 'entry link', 'img src']
     csv_writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
     csv_writer.writeheader()
@@ -92,7 +92,6 @@ if __name__ == '__main__':
             released = None
             publisher = None
             label = None
-            serialized = None
             volume = None
             vol_err = None
             entry_link = None
@@ -139,8 +138,7 @@ if __name__ == '__main__':
                 # alternative method for title (unreliable) is {c3_list[0]}
                 # parsing volume
                 volume_parsed = parse_volume(title)
-                volume = volume_parsed[0]
-                vol_err = volume_parsed[1]
+                volume = volume_parsed
                 # parsing author list
                 column3_list = list(column3.stripped_strings)  # converts generator (Iterator) object to list
                 if len(column3_list) >= 2:
@@ -171,8 +169,7 @@ if __name__ == '__main__':
                 entry_link = entry_anchor.get('href')
                 title = str(entry_anchor.string)
                 volume_parsed = parse_volume(title)
-                volume = volume_parsed[0]
-                vol_err = volume_parsed[1]
+                volume = volume_parsed
 
                 # in pre-2017年2月 format, column 3 has author:
                 column3 = entry.find('td', class_="column-3")
@@ -197,7 +194,6 @@ if __name__ == '__main__':
                 'released': released,
                 'publisher': publisher,
                 'label': label,
-                'serialization': serialized,
                 'volume': volume,
                 'vol error': vol_err,
                 'entry link': entry_link,

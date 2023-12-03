@@ -3,8 +3,9 @@ import csv
 import re
 import json
 import requests
-import amazon_entry
 from openai import OpenAI
+import amazon_entry
+
 
 
 def baka(diction, url):
@@ -17,10 +18,9 @@ def baka(diction, url):
 
         print(json_d)
 
+        romanized_title = json_d.get('title')
         associated_titles = json_d.get('associated')
         associated_titles = [titles.get('title') for titles in associated_titles]
-        diction.update(ENG_Title=associated_titles[0])
-        diction.update(JPN_Title=associated_titles[-1])
 
         associated_authors = json_d.get('authors')
         associated_authors = [author.get('name') for author in associated_authors]
@@ -28,17 +28,56 @@ def baka(diction, url):
         associated_authors = set(associated_authors)
         diction.update(ENG_Authors=associated_authors)
 
-        message = "please return the first Japanese title in the following list: " + str(associated_titles)
-        client = OpenAI()
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "You are an intelligent data parser."},
-                {"role": "user", "content": message},
-            ]
+        prompt_eng = "return just the first English string from the following list, \
+                    without quotation marks nor explanatory context: " + str(associated_titles)
+        prompt_jpn = "return just the first Japanese (日本語) string from the following list, \
+                    without quotation marks nor explanatory context: " + str(associated_titles)
+
+        client = OpenAI(
+            # defaults to os.environ.get("OPENAI_API_KEY")
+            api_key="",
         )
 
-        print(f"ChatGPT: {response}")
+        response = client.chat.completions.create(
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are a database manager",
+                },
+                {
+                    "role": "user",
+                    "content": prompt_eng,
+                }
+            ],
+            model="gpt-3.5-turbo",
+        )
+
+        english_title = response.choices[0].message.content.strip()
+        print(f"ChatGPT eng_title: {english_title}")
+
+        response = client.chat.completions.create(
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are a database manager",
+                },
+                {
+                    "role": "user",
+                    "content": prompt_jpn,
+                }
+            ],
+            model="gpt-3.5-turbo",
+        )
+
+        japanese_title = response.choices[0].message.content.strip()
+        print(f"ChatGPT jpn_title: {japanese_title}")
+
+        # for title in associated_titles:
+        #     english_title = None
+
+        diction.update(ENG_Title=english_title)
+        diction.update(ROM_Title=romanized_title)
+        diction.update(JPN_Title=japanese_title)
 
     return diction
 
@@ -87,12 +126,13 @@ if __name__ == '__main__':
     # initialize csv file
     csv_filename = 'title_converter.csv'
     csv_file = open(csv_filename, 'w', newline='', encoding='utf_8_sig')
-    fieldnames = ['JPN_Title', 'ENG_Title', 'JPN_Authors', 'ENG_Authors']
+    fieldnames = ['JPN_Title', 'ENG_Title', 'ROM_Title', 'JPN_Authors', 'ENG_Authors']
     csv_writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
     csv_writer.writeheader()
 
     # initialize relevant variables to blank
     jpn_title = None
+    rom_title = None
     eng_title = None
     jpn_authors = None
     eng_authors = None
@@ -100,6 +140,7 @@ if __name__ == '__main__':
     # initialize blank dictionary
     entry_dict = {
         'JPN_Title': jpn_title,
+        'ROM_Title': rom_title,
         'ENG_Title': eng_title,
         'JPN_Authors': jpn_authors,
         'ENG_Authors': eng_authors,
@@ -108,14 +149,15 @@ if __name__ == '__main__':
     # switch between testing a single entry or the full yurinavi title list
     test_bench = 'single'
     if test_bench == 'single':
-        test_title = '同居人が不安定でして%281巻%29'
+        test_title = 'SHIBUYA ギャル百合アンソロジー'
         # csv_example: 同居人が不安定でして%281巻%29
         # existing title: ぜんぶ壊して地獄で愛して      # example api_url: id = 'k7k4tye' -> 43992727718
         # existing title2: セントールの悩み
-        # existing title3: おとなになっても
-        # light novel: 祈りの国のリリエール３(GAノベル)
+        # existing title3: やがて君になる
+        # light novel & no english title: 祈りの国のリリエール３(GAノベル)
         # might not exist: ラストサマー・バケーション
-        # anthology:  あーしとわたし。　ギャル×百合アンソロジー (カドカワデジタルコミックス)
+        # doesn't exist: あーしとわたし。　ギャル×百合アンソロジー (カドカワデジタルコミックス)
+        # anthology: SHIBUYA ギャル百合アンソロジー
         # fanbook: 転生王女と天才令嬢の魔法革命　ANIMATION　公式ファンブック(富士見ファンタジア文庫)
 
         # switch between url editing and in-site searching
@@ -150,7 +192,12 @@ if __name__ == '__main__':
         # jpn_title = [uncleaned_title for uncleaned_title in initial_title]
 
         for initial_title in title_column:
-            entry_dict = baka(entry_dict, initial_title)
+
+            # switch between url editing and in-site searching
+            switch_baka = 'api'
+            entry_url = baka_search(switch_baka, initial_title)
+            entry_dict = baka(entry_dict, entry_url)
+
             csv_writer.writerow(entry_dict)
             print(f'{entry_dict}\n')
 

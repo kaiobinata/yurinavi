@@ -16,14 +16,16 @@ import yurinavi_monthly
 
 
 def scrape(dic, url):
+    print(f'***** Current Entry ***** \nURL: {url}')
+
     # switch between packages (creatively bypass automated access to Amazon)
     request_type = 'requests'   # 'urllib.request' or 'requests'
     amzn_soup = simple_soup(request_type, url)
     if amzn_soup is None:
         dic.update(error='URL invalid')
         return dic
-
-    print(f'***** Current Entry ***** \nURL: {url}')
+    else:
+        dic.update(link=url)
 
     # parse status of the current page: [is the page a Kindle/Physical entry?] else [is URL valid?]
     tmm_swatches = amzn_soup.find(id="tmmSwatches")  # looks for format information
@@ -167,13 +169,13 @@ def simple_soup(req_type, url):
             print("simple_soup() | url invalid; return None (!soup)")
             return None
         else:
-            amzn_html = response.text
-            amzn_soup = BeautifulSoup(amzn_html, 'html.parser')
-            return amzn_soup
+            html_response = response.text
+            soup_response = BeautifulSoup(html_response, 'html.parser')
+            return soup_response
     elif req_type == 'urllib.request':
-        amzn_html = urllib.request.urlopen(url)
-        amzn_soup = BeautifulSoup(amzn_html, 'html.parser')
-        return amzn_soup
+        html_response = urllib.request.urlopen(url)
+        soup_response = BeautifulSoup(html_response, 'html.parser')
+        return soup_response
     else:
         print("simple_soup() | req_type invalid; return None (!soup)")
         return None
@@ -291,6 +293,75 @@ def amazon_selenium_scrape(diction, soup):
             rat = [ratings_average, ratings_submissions]
             print(f"rat: {rat}")
             diction.update(rating=rat)
+
+    # ranking
+    product_details = soup.find('div', id="detailBulletsWrapper_feature_div")
+    if product_details:
+        prod_details_list = product_details.find_all('span', class_="a-list-item")
+        if not prod_details_list:  # troubleshooting
+            diction.update(ranking='ERROR')
+        if prod_details_list:
+            for item in prod_details_list:
+                definition = item.find('span', class_="a-text-bold")
+                if definition:
+                    definition_str = str(definition.string).lstrip()
+                    print(f'definition string1: {definition_str}')
+                else:
+                    definition_str = str(item.get_text()).lstrip()
+                    print(f'definition string2: {definition_str}')
+                match definition_str:
+                    case 'Publisher':
+                        pub1 = definition.next  # next span element of the same rank (?)
+                    case 'Language':
+                        lan1 = definition.next  # next span element of the same rank (?)
+                    case 'Paperback':
+                        pages1 = definition.next  # next span element of the same rank (?)
+                    case 'ISBN-10':
+                        isbn10 = ''
+                    case 'ISBN-13 ‏:‎':
+                        isbn13 = ''
+                    case 'Reading age ':
+                        reading_age = ''
+                    case 'Grade level ':
+                        pass
+                    case 'Amazon Bestseller: ':
+                        rank_entry = str(item.get_text()).lstrip()
+                        print(f'rank_entry1: {rank_entry}')
+                        rank_match = re.search(r'#(?P<rank>(\d|,)+) in (?P<tag>\S+)', rank_entry)
+                        print(f'rank match: {rank_match}')
+                        if rank_match:
+                            new_tag = rank_match.group('tag')
+                            new_rank = rank_match.group('rank')
+                            initialized_rank = {new_tag: new_rank}  # initializes ranking dictionary
+                            print(f'initialized_rank: {initialized_rank}')
+                            diction.update(ranking=initialized_rank)
+                    case 'Amazon 売れ筋ランキング: ':
+                        rank_entry = str(item.get_text()).lstrip()
+                        print(f'rank_entry2: {rank_entry}')
+                        rank_match = re.match(r'- (?P<rank>\d+)位(?P<tag>\S+)', rank_entry)
+                        if rank_match:
+                            new_tag = rank_match.group('tag')
+                            new_rank = rank_match.group('rank')
+                            initialized_rank = {new_tag: new_rank}  # initializes ranking dictionary
+                            print(f'initialized_rank: {initialized_rank}')
+                            diction.update(ranking=initialized_rank)
+                    case _:
+                        rank_match_eng = re.match(r'#(?P<rank>\d+) in (?P<tag>\s+)', definition_str)
+                        rank_match_jpn = re.match(r'- (?P<rank>\d+)位(?P<tag>\s+)', definition_str)
+                        if rank_match_eng:
+                            new_tag = rank_match_eng.group('tag')
+                            new_rank = rank_match_eng.group('rank')
+                            rank_full_dict = diction.get('ranking')
+                            rank_full_dict[new_tag] = new_rank  # appends new ranking entry
+                            print(f'rank_full_dict: {rank_full_dict}')
+                            diction.update(ranking=rank_full_dict)
+                        elif rank_match_jpn:
+                            new_tag = rank_match_jpn.group('tag')
+                            new_rank = rank_match_jpn.group('rank')
+                            rank_full_dict = diction.get('ranking')
+                            rank_full_dict[new_tag] = new_rank  # appends new ranking entry
+                            print(f'rank_full_dict: {rank_full_dict}')
+                            diction.update(ranking=rank_full_dict)
 
     # description element
     div_description = soup.find('div', id="bookDescription_feature_div")

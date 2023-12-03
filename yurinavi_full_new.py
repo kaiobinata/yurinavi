@@ -13,7 +13,7 @@ def isamazon(link):
 
 # Test Bench
 if __name__ == '__main__':
-    yurinavi_monthly = pd.read_csv('yurinavimonthly_uncleaned.csv')
+    yurinavi_monthly = pd.read_csv('yurinavimonthly_cleaning.csv')
     df = yurinavi_monthly.copy()
 
     # initialize csv file
