@@ -1,6 +1,6 @@
+from bs4 import BeautifulSoup
 import pandas as pd
 import requests
-from bs4 import BeautifulSoup
 import csv
 import re
 
@@ -164,13 +164,13 @@ def jpn_split_volume(csv_filename):
 # main function
 if __name__ == '__main__':
     # a program for obtaining the csv by webscraping the given okazu website
-    # # okazu_url = 'https://www.yuricon.com/product-category/jpn-manga/'
-    # okazu_url = 'https://www.yuricon.com/product-category/english-manga/'
-    # # okazu_url = 'https://www.yuricon.com/product-category/novels/'
-    # category_scrape(okazu_url, 'okazu.csv')
+    okazu_url = 'https://www.yuricon.com/product-category/english-manga/'
+    # okazu_url = 'https://www.yuricon.com/product-category/jpn-manga/'
+    # okazu_url = 'https://www.yuricon.com/product-category/novels/'
+    category_scrape(okazu_url, 'okazu.csv')
 
     # # a program for cleaning the obtained csv into individual titles and volumes
     # volume_clean('okazu_eng_cleaned.csv')
 
-    # a program for cleaning the obtained jpn csv into Japanese and Romanized titles:
-    jpn_split_volume('okazu_jpn_cleaned.csv')
+    # # a program for cleaning the obtained jpn csv into Japanese and Romanized titles:
+    # jpn_split_volume('okazu_jpn_cleaned.csv')
